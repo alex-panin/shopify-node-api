@@ -1,6 +1,5 @@
 import http from 'http';
 
-import {Context} from '../context';
 import {ShopifyOAuth} from '../auth/oauth/oauth';
 import * as ShopifyErrors from '../error';
 
@@ -15,17 +14,14 @@ export default async function deleteCurrentSession(
   request: http.IncomingMessage,
   response: http.ServerResponse,
   isOnline = true,
+  oAuth: ShopifyOAuth,
 ): Promise<boolean | never> {
-  Context.throwIfUninitialized();
+  oAuth.context.throwIfUninitialized();
 
-  const sessionId = ShopifyOAuth.getCurrentSessionId(
-    request,
-    response,
-    isOnline,
-  );
+  const sessionId = oAuth.getCurrentSessionId(request, response, isOnline);
   if (!sessionId) {
     throw new ShopifyErrors.SessionNotFound('No active session found.');
   }
 
-  return Context.SESSION_STORAGE.deleteSession(sessionId);
+  return oAuth.context.SESSION_STORAGE.deleteSession(sessionId);
 }

@@ -1,5 +1,4 @@
-import {Context} from '../context';
-import OAuth from '../auth/oauth';
+import {ShopifyOAuth} from '../auth/oauth';
 
 /**
  * Helper method to find and delete offline sessions by shop url.
@@ -8,10 +7,12 @@ import OAuth from '../auth/oauth';
  */
 export default async function deleteOfflineSession(
   shop: string,
+  oAuth: ShopifyOAuth,
+  sessionId: string,
 ): Promise<boolean> {
-  Context.throwIfUninitialized();
+  oAuth.context.throwIfUninitialized();
 
-  const sessionId = OAuth.getOfflineSessionId(shop);
+  // const sessionId = oAuth.getOfflineSessionId(shop);
 
-  return Context.SESSION_STORAGE.deleteSession(sessionId);
+  return oAuth.context.SESSION_STORAGE.deleteSession(sessionId);
 }

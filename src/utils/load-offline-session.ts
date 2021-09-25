@@ -1,6 +1,5 @@
-import {Session} from '../auth/session/session';
-import {Context} from '../context';
-import OAuth from '../auth/oauth';
+import type {Session} from '../auth/session/session';
+import {ShopifyOAuth} from '../auth/oauth';
 
 /**
  * Helper method for quickly loading offline sessions by shop url.
@@ -13,12 +12,12 @@ import OAuth from '../auth/oauth';
 export default async function loadOfflineSession(
   shop: string,
   includeExpired = false,
+  oAuth: ShopifyOAuth,
+  sessionId: string,
 ): Promise<Session | undefined> {
-  Context.throwIfUninitialized();
-
-  const sessionId = OAuth.getOfflineSessionId(shop);
-  const session = await Context.SESSION_STORAGE.loadSession(sessionId);
-
+  oAuth.context.throwIfUninitialized();
+  // const sessionId = oAuth.getOfflineSessionId(shop);
+  const session = await oAuth.context.SESSION_STORAGE.loadSession(sessionId);
   const now = new Date();
 
   if (

@@ -1,6 +1,5 @@
 import http from 'http';
 
-import {Context} from '../context';
 import {ShopifyOAuth} from '../auth/oauth/oauth';
 import {Session} from '../auth/session';
 
@@ -15,17 +14,15 @@ export default async function loadCurrentSession(
   request: http.IncomingMessage,
   response: http.ServerResponse,
   isOnline = true,
+  oAuth: ShopifyOAuth,
+  sessionId: string,
 ): Promise<Session | undefined> {
-  Context.throwIfUninitialized();
+  oAuth.context.throwIfUninitialized();
 
-  const sessionId = ShopifyOAuth.getCurrentSessionId(
-    request,
-    response,
-    isOnline,
-  );
+  // const sessionId = oAuth.getCurrentSessionId(request, response, isOnline);
   if (!sessionId) {
     return Promise.resolve(undefined);
   }
-
-  return Context.SESSION_STORAGE.loadSession(sessionId);
+  const session = await oAuth.context.SESSION_STORAGE.loadSession(sessionId);
+  return session;
 }

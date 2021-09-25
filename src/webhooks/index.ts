@@ -1,8 +1,11 @@
 import {WebhooksRegistry} from './registry';
 
-const ShopifyWebhooks = {
-  Registry: WebhooksRegistry,
-};
+class ShopifyWebhooks {
+  public Registry: WebhooksRegistry;
+  constructor() {
+    this.Registry = new WebhooksRegistry();
+  }
+}
 
 export default ShopifyWebhooks;
 export {ShopifyWebhooks};

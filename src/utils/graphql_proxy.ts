@@ -1,5 +1,7 @@
 import http from 'http';
 
+import ShopifyOAuth from 'src/auth/oauth';
+
 import {GraphqlClient} from '../clients/graphql';
 import * as ShopifyErrors from '../error';
 
@@ -8,8 +10,16 @@ import loadCurrentSession from './load-current-session';
 export default async function graphqlProxy(
   userReq: http.IncomingMessage,
   userRes: http.ServerResponse,
+  oAuth: ShopifyOAuth,
+  sessionId: string,
 ): Promise<void> {
-  const session = await loadCurrentSession(userReq, userRes);
+  const session = await loadCurrentSession(
+    userReq,
+    userRes,
+    undefined,
+    oAuth,
+    sessionId,
+  );
   if (!session) {
     throw new ShopifyErrors.SessionNotFound(
       'Cannot proxy query. No session found.',
@@ -45,7 +55,7 @@ export default async function graphqlProxy(
         const options = {
           data: reqBodyObject ? reqBodyObject : reqBodyString,
         };
-        const client = new GraphqlClient(shopName, token);
+        const client = new GraphqlClient(shopName, oAuth.context, token);
         const response = await client.query(options);
         body = response.body;
       } catch (err) {

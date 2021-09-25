@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 
-import {Context} from '../context';
+import type {Context} from '../context';
 import * as ShopifyErrors from '../error';
 
 import validateShop from './shop-validator';
@@ -22,10 +22,10 @@ interface JwtPayload {
  *
  * @param token Received session token
  */
-function decodeSessionToken(token: string): JwtPayload {
+function decodeSessionToken(token: string, context: Context): JwtPayload {
   let payload: JwtPayload;
   try {
-    payload = jwt.verify(token, Context.API_SECRET_KEY, {
+    payload = jwt.verify(token, context.API_SECRET_KEY, {
       algorithms: ['HS256'],
     }) as JwtPayload;
   } catch (error) {
@@ -36,7 +36,7 @@ function decodeSessionToken(token: string): JwtPayload {
 
   // The exp and nbf fields are validated by the JWT library
 
-  if (payload.aud !== Context.API_KEY) {
+  if (payload.aud !== context.API_KEY) {
     throw new ShopifyErrors.InvalidJwtError(
       'Session token had invalid API key',
     );

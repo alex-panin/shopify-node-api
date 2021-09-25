@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/member-delimiter-style */
 import {createHmac} from 'crypto';
 import http from 'http';
 
@@ -6,7 +7,7 @@ import {StatusCode} from '@shopify/network';
 import {GraphqlClient} from '../clients/graphql/graphql_client';
 import {ApiVersion, ShopifyHeader} from '../base_types';
 import ShopifyUtilities from '../utils';
-import {Context} from '../context';
+import type {Context} from '../context';
 import * as ShopifyErrors from '../error';
 
 import {
@@ -37,6 +38,7 @@ interface RegistryInterface {
   process(
     request: http.IncomingMessage,
     response: http.ServerResponse,
+    context: Context,
   ): Promise<void>;
 
   /**
@@ -75,33 +77,42 @@ function isSuccess(
 }
 
 // 2020-07 onwards
-function versionSupportsEndpointField() {
-  return ShopifyUtilities.versionCompatible(ApiVersion.July20);
+function versionSupportsEndpointField(context: Context) {
+  return ShopifyUtilities.versionCompatible(
+    ApiVersion.July20,
+    context.API_VERSION,
+  );
 }
 
-function versionSupportsPubSub() {
-  return ShopifyUtilities.versionCompatible(ApiVersion.July21);
+function versionSupportsPubSub(context: Context) {
+  return ShopifyUtilities.versionCompatible(
+    ApiVersion.July21,
+    context.API_VERSION,
+  );
 }
 
-function validateDeliveryMethod(deliveryMethod: DeliveryMethod) {
+function validateDeliveryMethod(
+  deliveryMethod: DeliveryMethod,
+  context: Context,
+) {
   if (
     deliveryMethod === DeliveryMethod.EventBridge &&
-    !versionSupportsEndpointField()
+    !versionSupportsEndpointField(context)
   ) {
     throw new ShopifyErrors.UnsupportedClientType(
-      `EventBridge webhooks are not supported in API version "${Context.API_VERSION}".`,
+      `EventBridge webhooks are not supported in API version "${context.API_VERSION}".`,
     );
   } else if (
     deliveryMethod === DeliveryMethod.PubSub &&
-    !versionSupportsPubSub()
+    !versionSupportsPubSub(context)
   ) {
     throw new ShopifyErrors.UnsupportedClientType(
-      `Pub/Sub webhooks are not supported in API version "${Context.API_VERSION}".`,
+      `Pub/Sub webhooks are not supported in API version "${context.API_VERSION}".`,
     );
   }
 }
 
-function buildCheckQuery(topic: string): string {
+function buildCheckQuery(topic: string, context: Context): string {
   const query = `{
     webhookSubscriptions(first: 1, topics: ${topic}) {
       edges {
@@ -116,7 +127,7 @@ function buildCheckQuery(topic: string): string {
               arn
             }
             ${
-              versionSupportsPubSub()
+              versionSupportsPubSub(context)
                 ? '... on WebhookPubSubEndpoint { \
                     pubSubProject \
                     pubSubTopic \
@@ -140,16 +151,17 @@ function buildCheckQuery(topic: string): string {
     }
   }`;
 
-  return versionSupportsEndpointField() ? query : legacyQuery;
+  return versionSupportsEndpointField(context) ? query : legacyQuery;
 }
 
 function buildQuery(
   topic: string,
   address: string,
   deliveryMethod: DeliveryMethod = DeliveryMethod.Http,
+  context: Context,
   webhookId?: string,
 ): string {
-  validateDeliveryMethod(deliveryMethod);
+  validateDeliveryMethod(deliveryMethod, context);
   let identifier: string;
   if (webhookId) {
     identifier = `id: "${webhookId}"`;
@@ -201,26 +213,30 @@ function buildQuery(
   `;
 }
 
-const WebhooksRegistry: RegistryInterface = {
-  webhookRegistry: [],
+class WebhooksRegistry implements RegistryInterface {
+  public webhookRegistry: WebhookRegistryEntry[];
+  constructor() {
+    this.webhookRegistry = [];
+  }
 
-  async register({
+  public async register({
     path,
     topic,
     accessToken,
     shop,
+    context,
     deliveryMethod = DeliveryMethod.Http,
     webhookHandler,
-  }: RegisterOptions): Promise<RegisterReturn> {
-    validateDeliveryMethod(deliveryMethod);
-    const client = new GraphqlClient(shop, accessToken);
+  }: RegisterOptions & {context: Context}): Promise<RegisterReturn> {
+    validateDeliveryMethod(deliveryMethod, context);
+    const client = new GraphqlClient(shop, context, accessToken);
     const address =
       deliveryMethod === DeliveryMethod.Http
-        ? `https://${Context.HOST_NAME}${path}`
+        ? `https://${context.HOST_NAME}${path}`
         : path;
     const checkResult = (await client.query({
-      data: buildCheckQuery(topic),
-    })) as {body: WebhookCheckResponse | WebhookCheckResponseLegacy;};
+      data: buildCheckQuery(topic, context),
+    })) as {body: WebhookCheckResponse | WebhookCheckResponseLegacy};
     let webhookId: string | undefined;
     let mustRegister = true;
     if (checkResult.body.data.webhookSubscriptions.edges.length) {
@@ -245,7 +261,7 @@ const WebhooksRegistry: RegistryInterface = {
     let body: unknown;
     if (mustRegister) {
       const result = await client.query({
-        data: buildQuery(topic, address, deliveryMethod, webhookId),
+        data: buildQuery(topic, address, deliveryMethod, context, webhookId),
       });
 
       success = isSuccess(result.body, deliveryMethod, webhookId);
@@ -257,17 +273,19 @@ const WebhooksRegistry: RegistryInterface = {
 
     if (success) {
       // Remove this topic from the registry if it is already there
-      WebhooksRegistry.webhookRegistry =
-        WebhooksRegistry.webhookRegistry.filter((item) => item.topic !== topic);
-      WebhooksRegistry.webhookRegistry.push({path, topic, webhookHandler});
+      this.webhookRegistry = this.webhookRegistry.filter(
+        (item) => item.topic !== topic,
+      );
+      this.webhookRegistry.push({path, topic, webhookHandler});
     }
 
     return {success, result: body};
-  },
+  }
 
-  async process(
+  public async process(
     request: http.IncomingMessage,
     response: http.ServerResponse,
+    context: Context,
   ): Promise<void> {
     let reqBody = '';
 
@@ -331,7 +349,7 @@ const WebhooksRegistry: RegistryInterface = {
         let responseError: Error | undefined;
         const headers = {};
 
-        const generatedHash = createHmac('sha256', Context.API_SECRET_KEY)
+        const generatedHash = createHmac('sha256', context.API_SECRET_KEY)
           .update(reqBody, 'utf8')
           .digest('base64');
 
@@ -339,7 +357,7 @@ const WebhooksRegistry: RegistryInterface = {
           const graphqlTopic = (topic as string)
             .toUpperCase()
             .replace(/\//g, '_');
-          const webhookEntry = WebhooksRegistry.webhookRegistry.find(
+          const webhookEntry = this.webhookRegistry.find(
             (entry) => entry.topic === graphqlTopic,
           );
 
@@ -379,13 +397,11 @@ const WebhooksRegistry: RegistryInterface = {
     });
 
     return promise;
-  },
+  }
 
-  isWebhookPath(path: string): boolean {
-    return Boolean(
-      WebhooksRegistry.webhookRegistry.find((entry) => entry.path === path),
-    );
-  },
-};
+  public isWebhookPath(path: string): boolean {
+    return Boolean(this.webhookRegistry.find((entry) => entry.path === path));
+  }
+}
 
 export {WebhooksRegistry, RegistryInterface, buildCheckQuery, buildQuery};

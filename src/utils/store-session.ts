@@ -1,4 +1,4 @@
-import {Context} from '../context';
+import type {Context} from '../context';
 import {Session} from '../auth/session';
 
 /**
@@ -6,8 +6,11 @@ import {Session} from '../auth/session';
  *
  * @param Session Session object
  */
-export default async function storeSession(session: Session): Promise<boolean> {
-  Context.throwIfUninitialized();
+export default async function storeSession(
+  session: Session,
+  context: Context,
+): Promise<boolean> {
+  context.throwIfUninitialized();
 
-  return Context.SESSION_STORAGE.storeSession(session);
+  return context.SESSION_STORAGE.storeSession(session);
 }

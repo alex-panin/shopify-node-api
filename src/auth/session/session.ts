@@ -1,5 +1,5 @@
 import {OnlineAccessInfo} from '../oauth/types';
-import {Context} from '../../context';
+import type {Context} from '../../context';
 
 import {SessionInterface} from './types';
 
@@ -7,8 +7,12 @@ import {SessionInterface} from './types';
  * Stores App information from logged in merchants so they can make authenticated requests to the Admin API.
  */
 class Session implements SessionInterface {
-  public static cloneSession(session: Session, newId: string): Session {
-    const newSession = new Session(newId);
+  public static cloneSession(
+    session: Session,
+    newId: string,
+    context: Context,
+  ): Session {
+    const newSession = new Session(newId, context);
 
     newSession.shop = session.shop;
     newSession.state = session.state;
@@ -29,10 +33,10 @@ class Session implements SessionInterface {
   public accessToken?: string;
   public onlineAccessInfo?: OnlineAccessInfo;
 
-  constructor(readonly id: string) {}
+  constructor(readonly id: string, public context: Context) {}
 
   public isActive(): boolean {
-    const scopesUnchanged = Context.SCOPES.equals(this.scope);
+    const scopesUnchanged = this.context.SCOPES.equals(this.scope);
     if (
       scopesUnchanged &&
       this.accessToken &&

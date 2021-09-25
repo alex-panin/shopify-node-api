@@ -1,7 +1,7 @@
 {
   "name": "@shopify/shopify-api",
   "version": "1.4.1",
-  "description": "Shopify API Library for Node - accelerate development with support for authentication, graphql proxy, webhooks",
+  "description": "a fork of Shopify API Library for Node to allow use of multiple Shopify instances",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "prettier": "@shopify/prettier-config",
@@ -47,7 +47,8 @@
     "jsonwebtoken": "^8.5.1",
     "node-fetch": "^2.6.1",
     "tslib": "^2.0.3",
-    "uuid": "^8.3.1"
+    "uuid": "^8.3.1",
+    "yarn": "^1.22.11"
   },
   "devDependencies": {
     "@shopify/eslint-plugin": "^39.0.3",

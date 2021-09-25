@@ -8,7 +8,7 @@ import {Method, StatusCode} from '@shopify/network';
 import * as ShopifyErrors from '../../error';
 import {SHOPIFY_API_LIBRARY_VERSION} from '../../version';
 import validateShop from '../../utils/shop-validator';
-import {Context} from '../../context';
+import type {Context} from '../../context';
 
 import {
   DataType,
@@ -27,7 +27,7 @@ class HttpClient {
   static readonly DEPRECATION_ALERT_DELAY = 300000;
   private LOGGED_DEPRECATIONS: Record<string, number> = {};
 
-  public constructor(private domain: string) {
+  public constructor(private domain: string, protected context: Context) {
     if (!validateShop(domain)) {
       throw new ShopifyErrors.InvalidShopError(`Domain ${domain} is not valid`);
     }
@@ -73,8 +73,8 @@ class HttpClient {
 
     let userAgent = `Shopify API Library v${SHOPIFY_API_LIBRARY_VERSION} | Node ${process.version}`;
 
-    if (Context.USER_AGENT_PREFIX) {
-      userAgent = `${Context.USER_AGENT_PREFIX} | ${userAgent}`;
+    if (this.context.USER_AGENT_PREFIX) {
+      userAgent = `${this.context.USER_AGENT_PREFIX} | ${userAgent}`;
     }
 
     if (params.extraHeaders) {
@@ -201,12 +201,12 @@ class HttpClient {
             ) {
               this.LOGGED_DEPRECATIONS[depHash] = Date.now();
 
-              if (Context.LOG_FILE) {
+              if (this.context.LOG_FILE) {
                 const stack = new Error().stack;
                 const log = `API Deprecation Notice ${new Date().toLocaleString()} : ${JSON.stringify(
                   deprecation,
                 )}\n    Stack Trace: ${stack}\n`;
-                fs.writeFileSync(Context.LOG_FILE, log, {
+                fs.writeFileSync(this.context.LOG_FILE, log, {
                   flag: 'a',
                   encoding: 'utf-8',
                 });

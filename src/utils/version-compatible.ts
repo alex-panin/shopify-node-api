@@ -1,4 +1,3 @@
-import {Context} from '../context';
 import {ApiVersion} from '../base_types';
 
 /**
@@ -6,7 +5,7 @@ import {ApiVersion} from '../base_types';
  */
 export default function versionCompatible(
   referenceVersion: ApiVersion,
-  currentVersion: ApiVersion = Context.API_VERSION,
+  currentVersion: ApiVersion,
 ): boolean {
   // Return true if not using a dated version
   if (

@@ -1,19 +1,30 @@
+import type {Context} from '../../../context';
 import {Session} from '../session';
 import {SessionInterface} from '../types';
 import {SessionStorage} from '../session_storage';
 import * as ShopifyErrors from '../../../error';
 
 export class CustomSessionStorage implements SessionStorage {
+  readonly storeCallback: (session: SessionInterface) => Promise<boolean>;
+  readonly loadCallback: (
+    id: string,
+  ) => Promise<SessionInterface | Record<string, unknown> | undefined>;
+
+  readonly deleteCallback: (id: string) => Promise<boolean>;
+  public context: Context;
+
   constructor(
-    readonly storeCallback: (session: SessionInterface) => Promise<boolean>,
-    readonly loadCallback: (
+    storeCallback: (session: SessionInterface) => Promise<boolean>,
+    loadCallback: (
       id: string,
     ) => Promise<SessionInterface | Record<string, unknown> | undefined>,
-    readonly deleteCallback: (id: string) => Promise<boolean>,
+    deleteCallback: (id: string) => Promise<boolean>,
+    context: Context,
   ) {
     this.storeCallback = storeCallback;
     this.loadCallback = loadCallback;
     this.deleteCallback = deleteCallback;
+    this.context = context;
   }
 
   public async storeSession(session: SessionInterface): Promise<boolean> {
@@ -43,7 +54,7 @@ export class CustomSessionStorage implements SessionStorage {
 
         return result;
       } else if (result instanceof Object && 'id' in result) {
-        let session = new Session(result.id as string);
+        let session = new Session(result.id as string, this.context);
         session = {...session, ...(result as SessionInterface)};
 
         if (session.expires && typeof session.expires === 'string') {

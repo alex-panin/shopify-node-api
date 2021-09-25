@@ -1,3 +1,4 @@
+import type {Context} from '../../context';
 import {OnlineAccessInfo} from '../oauth/types';
 
 export interface SessionInterface {
@@ -10,4 +11,6 @@ export interface SessionInterface {
   accessToken?: string;
   onlineAccessInfo?: OnlineAccessInfo;
   isActive(): boolean;
+
+  context: Context;
 }

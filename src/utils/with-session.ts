@@ -1,8 +1,9 @@
+import ShopifyOAuth from 'src/auth/oauth';
+
 import * as ShopifyErrors from '../error';
 import {Session} from '../auth/session';
 import {GraphqlClient} from '../clients/graphql';
 import {RestClient} from '../clients/rest';
-import {Context} from '../context';
 
 import {WithSessionParams, WithSessionResponse} from './types';
 import loadOfflineSession from './load-offline-session';
@@ -14,8 +15,13 @@ export default async function withSession({
   req,
   res,
   shop,
-}: WithSessionParams): Promise<WithSessionResponse> {
-  Context.throwIfUninitialized();
+  oAuth,
+  sessionId,
+}: WithSessionParams & {
+  oAuth: ShopifyOAuth;
+  sessionId: string;
+}): Promise<WithSessionResponse> {
+  oAuth.context.throwIfUninitialized();
 
   let session: Session | undefined;
   if (isOnline) {
@@ -25,7 +31,7 @@ export default async function withSession({
       );
     }
 
-    session = await loadCurrentSession(req, res);
+    session = await loadCurrentSession(req, res, undefined, oAuth, sessionId);
   } else {
     if (!shop) {
       throw new ShopifyErrors.MissingRequiredArgument(
@@ -33,7 +39,7 @@ export default async function withSession({
       );
     }
 
-    session = await loadOfflineSession(shop);
+    session = await loadOfflineSession(shop, undefined, oAuth, sessionId);
   }
 
   if (!session) {
@@ -47,13 +53,17 @@ export default async function withSession({
   let client: RestClient | GraphqlClient;
   switch (clientType) {
     case 'rest':
-      client = new RestClient(session.shop, session.accessToken);
+      client = new RestClient(session.shop, oAuth.context, session.accessToken);
       return {
         client,
         session,
       };
     case 'graphql':
-      client = new GraphqlClient(session.shop, session.accessToken);
+      client = new GraphqlClient(
+        session.shop,
+        oAuth.context,
+        session.accessToken,
+      );
       return {
         client,
         session,
