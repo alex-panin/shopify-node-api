@@ -1,9 +1,11 @@
+import type {Context} from 'src/context';
+
 import {WebhooksRegistry} from './registry';
 
 class ShopifyWebhooks {
   public Registry: WebhooksRegistry;
-  constructor() {
-    this.Registry = new WebhooksRegistry();
+  constructor(context: Context) {
+    this.Registry = new WebhooksRegistry(context);
   }
 }
 

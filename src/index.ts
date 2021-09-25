@@ -30,7 +30,7 @@ class Shopify {
 
     this.Context = context;
     this.Auth = new ShopifyOAuth(context);
-    this.Webhooks = new ShopifyWebhooks();
+    this.Webhooks = new ShopifyWebhooks(context);
 
     this.Clients = ShopifyClients;
     this.Session = ShopifySession;

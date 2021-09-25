@@ -100,23 +100,24 @@ function buildQuery(topic, address, deliveryMethod, context, webhookId) {
 }
 exports.buildQuery = buildQuery;
 var WebhooksRegistry = /** @class */ (function () {
-    function WebhooksRegistry() {
+    function WebhooksRegistry(context) {
         this.webhookRegistry = [];
+        this.context = context;
     }
     WebhooksRegistry.prototype.register = function (_a) {
-        var path = _a.path, topic = _a.topic, accessToken = _a.accessToken, shop = _a.shop, context = _a.context, _b = _a.deliveryMethod, deliveryMethod = _b === void 0 ? types_1.DeliveryMethod.Http : _b, webhookHandler = _a.webhookHandler;
+        var path = _a.path, topic = _a.topic, accessToken = _a.accessToken, shop = _a.shop, _b = _a.deliveryMethod, deliveryMethod = _b === void 0 ? types_1.DeliveryMethod.Http : _b, webhookHandler = _a.webhookHandler;
         return tslib_1.__awaiter(this, void 0, void 0, function () {
             var client, address, checkResult, webhookId, mustRegister, node, endpointAddress, success, body, result;
             return tslib_1.__generator(this, function (_c) {
                 switch (_c.label) {
                     case 0:
-                        validateDeliveryMethod(deliveryMethod, context);
-                        client = new graphql_client_1.GraphqlClient(shop, context, accessToken);
+                        validateDeliveryMethod(deliveryMethod, this.context);
+                        client = new graphql_client_1.GraphqlClient(shop, this.context, accessToken);
                         address = deliveryMethod === types_1.DeliveryMethod.Http
-                            ? "https://" + context.HOST_NAME + path
+                            ? "https://" + this.context.HOST_NAME + path
                             : path;
                         return [4 /*yield*/, client.query({
-                                data: buildCheckQuery(topic, context),
+                                data: buildCheckQuery(topic, this.context),
                             })];
                     case 1:
                         checkResult = (_c.sent());
@@ -142,7 +143,7 @@ var WebhooksRegistry = /** @class */ (function () {
                         }
                         if (!mustRegister) return [3 /*break*/, 3];
                         return [4 /*yield*/, client.query({
-                                data: buildQuery(topic, address, deliveryMethod, context, webhookId),
+                                data: buildQuery(topic, address, deliveryMethod, this.context, webhookId),
                             })];
                     case 2:
                         result = _c.sent();
@@ -164,7 +165,7 @@ var WebhooksRegistry = /** @class */ (function () {
             });
         });
     };
-    WebhooksRegistry.prototype.process = function (request, response, context) {
+    WebhooksRegistry.prototype.process = function (request, response) {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
             var reqBody, promise;
             var _this = this;
@@ -214,7 +215,7 @@ var WebhooksRegistry = /** @class */ (function () {
                                         return [2 /*return*/, reject(new ShopifyErrors.InvalidWebhookError("Missing one or more of the required HTTP headers to process webhooks: [" + missingHeaders.join(', ') + "]"))];
                                     }
                                     headers = {};
-                                    generatedHash = crypto_1.createHmac('sha256', context.API_SECRET_KEY)
+                                    generatedHash = crypto_1.createHmac('sha256', this.context.API_SECRET_KEY)
                                         .update(reqBody, 'utf8')
                                         .digest('base64');
                                     if (!utils_1.default.safeCompare(generatedHash, hmac)) return [3 /*break*/, 7];

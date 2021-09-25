@@ -28,11 +28,10 @@ declare function buildCheckQuery(topic: string, context: Context): string;
 declare function buildQuery(topic: string, address: string, deliveryMethod: DeliveryMethod | undefined, context: Context, webhookId?: string): string;
 declare class WebhooksRegistry implements RegistryInterface {
     webhookRegistry: WebhookRegistryEntry[];
-    constructor();
-    register({ path, topic, accessToken, shop, context, deliveryMethod, webhookHandler, }: RegisterOptions & {
-        context: Context;
-    }): Promise<RegisterReturn>;
-    process(request: http.IncomingMessage, response: http.ServerResponse, context: Context): Promise<void>;
+    context: Context;
+    constructor(context: Context);
+    register({ path, topic, accessToken, shop, deliveryMethod, webhookHandler, }: RegisterOptions): Promise<RegisterReturn>;
+    process(request: http.IncomingMessage, response: http.ServerResponse): Promise<void>;
     isWebhookPath(path: string): boolean;
 }
 export { WebhooksRegistry, RegistryInterface, buildCheckQuery, buildQuery };

@@ -215,8 +215,10 @@ function buildQuery(
 
 class WebhooksRegistry implements RegistryInterface {
   public webhookRegistry: WebhookRegistryEntry[];
-  constructor() {
+  public context: Context;
+  constructor(context: Context) {
     this.webhookRegistry = [];
+    this.context = context;
   }
 
   public async register({
@@ -224,18 +226,17 @@ class WebhooksRegistry implements RegistryInterface {
     topic,
     accessToken,
     shop,
-    context,
     deliveryMethod = DeliveryMethod.Http,
     webhookHandler,
-  }: RegisterOptions & {context: Context}): Promise<RegisterReturn> {
-    validateDeliveryMethod(deliveryMethod, context);
-    const client = new GraphqlClient(shop, context, accessToken);
+  }: RegisterOptions): Promise<RegisterReturn> {
+    validateDeliveryMethod(deliveryMethod, this.context);
+    const client = new GraphqlClient(shop, this.context, accessToken);
     const address =
       deliveryMethod === DeliveryMethod.Http
-        ? `https://${context.HOST_NAME}${path}`
+        ? `https://${this.context.HOST_NAME}${path}`
         : path;
     const checkResult = (await client.query({
-      data: buildCheckQuery(topic, context),
+      data: buildCheckQuery(topic, this.context),
     })) as {body: WebhookCheckResponse | WebhookCheckResponseLegacy};
     let webhookId: string | undefined;
     let mustRegister = true;
@@ -261,7 +262,13 @@ class WebhooksRegistry implements RegistryInterface {
     let body: unknown;
     if (mustRegister) {
       const result = await client.query({
-        data: buildQuery(topic, address, deliveryMethod, context, webhookId),
+        data: buildQuery(
+          topic,
+          address,
+          deliveryMethod,
+          this.context,
+          webhookId,
+        ),
       });
 
       success = isSuccess(result.body, deliveryMethod, webhookId);
@@ -285,7 +292,6 @@ class WebhooksRegistry implements RegistryInterface {
   public async process(
     request: http.IncomingMessage,
     response: http.ServerResponse,
-    context: Context,
   ): Promise<void> {
     let reqBody = '';
 
@@ -349,7 +355,7 @@ class WebhooksRegistry implements RegistryInterface {
         let responseError: Error | undefined;
         const headers = {};
 
-        const generatedHash = createHmac('sha256', context.API_SECRET_KEY)
+        const generatedHash = createHmac('sha256', this.context.API_SECRET_KEY)
           .update(reqBody, 'utf8')
           .digest('base64');
 
